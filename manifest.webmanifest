@@ -1,0 +1,15 @@
+{
+  "name": "TEC Gate Scanner",
+  "short_name": "TEC Gate",
+  "description": "Student gate entry / exit scanner for Thangavelu Engineering College",
+  "start_url": "./scan",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf1f6",
+  "theme_color": "#bb005c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Security Desk · Thangavelu Engineering College</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#bb005c"><link rel="icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="common.css">
+<style>.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px}.chip{background:var(--blush);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.chip b{display:block;font-size:22px;color:var(--brand-dark)}.chip span{font-size:12px;color:var(--muted)}.rpt-title{margin:18px 0 8px;font-weight:700;color:var(--plum)}.tbl-wrap{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}th{position:sticky;top:0;background:var(--brand-dark);color:#fff}tbody tr:nth-child(even){background:#fdf7fa}.empty{padding:14px;color:var(--muted)}.rep-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-top:14px}.rep-row .f{flex:1 1 180px}.rep-row input{font-size:16px;padding:10px 12px}</style></head><body>
+<header class="brand"><img class="logo" src="icon-512.png" alt="Thangavelu Engineering College logo"><h1 class="college-name">Thangavelu Engineering College</h1><p class="motto">Faith · Peace · Wisdom</p></header>
+<nav class="nav"><a href="./">← Home</a><span><button type="button" class="btn secondary" id="settingsToggle">⚙️ Settings</button> &nbsp;<a href="admin">Admin</a></span></nav>
+<section class="settings" id="settings"></section>
+<main class="app"><h2 class="app-title">Student Gate Entry / Exit</h2><div class="subtitle" id="subtitle"></div>
+    <div class="mode-status" id="modeStatus"></div>
+    <label for="barcode">Scan student barcode</label><input id="barcode" type="text" placeholder="Scan barcode or type register number, then Enter" autocomplete="off" autofocus><div class="last-scan" id="lastScan" hidden></div>
+    <div class="small">Use a USB barcode scanner (Enter suffix) or type the barcode / register number and press Enter. The scanned number stays in the box until the next scan replaces it.</div>
+    <div id="studentPanel" class="panel" hidden></div>
+    <div id="manualActions" class="manual-actions" hidden><button type="button" class="btn direction entry" id="manualInBtn">↘ ENTRY (IN)</button><button type="button" class="btn direction exit" id="manualOutBtn">↗ EXIT (OUT)</button></div>
+    <div class="row"><button type="button" class="btn clear" id="clearBtn">↺ Clear / Scan Next Student</button></div>
+    <div id="message" role="status" aria-live="polite" class="status info">Ready. Scan a student barcode.</div>
+    <div class="small" id="modeHelp"></div>
+</main>
+<section class="app" id="reportsCard"><h2 class="app-title">Reports</h2>
+  <div class="small" style="margin-top:0">Reports are calculated from Gate_Logs and saved to the Report_Daily / Report_Monthly sheets. Student records and gate logs are never changed.</div>
+  <div class="rep-row"><div class="f"><label for="reportDate">Daily report date</label><input type="date" id="reportDate"></div><button type="button" class="btn" id="dailyBtn">Generate daily report</button></div>
+  <div class="rep-row"><div class="f"><label for="reportMonth">Monthly report month</label><input type="month" id="reportMonth"></div><button type="button" class="btn" id="monthlyBtn">Generate monthly report</button></div>
+  <div id="reportMessage" class="status info" hidden></div><div id="reportOutput"></div>
+  <div class="row"><button type="button" class="btn secondary" id="csvBtn" hidden>Download CSV</button></div>
+</section>
+<div class="watermark" aria-hidden="true">THIVARA SOLUTIONS</div>
+<script src="phone.js"></script>
+<script src="common.js"></script>
+<script>
+const {$, esc, api} = TEC, input = $('barcode');
+// The scanned number now STAYS in the box (selected), so the next scan simply replaces it.
+TEC.mount({
+  onDone: () => { input.disabled = false; if (!document.querySelector('#reportsCard :focus, #settings :focus')) { input.focus(); input.select(); } },
+  onClear: () => { input.value = ''; }
+});
+input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); TEC.submit(input.value); input.select(); } });
+input.addEventListener('focus', () => input.select());
+window.addEventListener('load', () => input.focus());
+document.addEventListener('click', e => { if (!e.target.closest('#reportsCard,#settings,#settingsToggle,button,a,select')) input.focus(); });
+
+/* ----- reports ----- */
+const rm = $('reportMessage'); let current = null, rbusy = false;
+const p2 = n => String(n).padStart(2, '0'), d0 = new Date();
+$('reportMonth').value = d0.getFullYear() + '-' + p2(d0.getMonth() + 1); $('reportDate').value = $('reportMonth').value + '-' + p2(d0.getDate());
+function rmsg(t, type) { rm.hidden = false; rm.className = 'status ' + type; rm.textContent = t; }
+function render(r) {
+  let h = '<div class="chips">' + r.summary.map(s => '<div class="chip"><b>' + esc(s[1]) + '</b><span>' + esc(s[0]) + '</span></div>').join('') + '</div>';
+  r.tables.forEach(t => {
+    h += '<div class="rpt-title">' + esc(t.title) + '</div>';
+    h += t.rows.length ? '<div class="tbl-wrap"><table><thead><tr>' + t.headers.map(x => '<th>' + esc(x.replace(/_/g, ' ')) + '</th>').join('') + '</tr></thead><tbody>' + t.rows.map(row => '<tr>' + row.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' : '<div class="empty">No records found for this period.</div>';
+  });
+  $('reportOutput').innerHTML = h;
+}
+async function run(kind) {
+  if (rbusy) return;
+  const v = kind === 'daily' ? $('reportDate').value : $('reportMonth').value;
+  if (!(kind === 'daily' ? /^\d{4}-\d{2}-\d{2}$/ : /^\d{4}-\d{2}$/).test(v)) return rmsg(kind === 'daily' ? 'Select a date.' : 'Select a month.', 'error');
+  rbusy = true; $('dailyBtn').disabled = $('monthlyBtn').disabled = true; $('csvBtn').hidden = true; rmsg('Generating ' + kind + ' report…', 'info');
+  const r = await api(kind === 'daily' ? { action: 'generateDailyReport', date: v } : { action: 'generateMonthlyReport', month: v });
+  rbusy = false; $('dailyBtn').disabled = $('monthlyBtn').disabled = false;
+  if (!r.ok) return rmsg(r.message || 'Could not generate the report.', 'error');
+  current = r; render(r); $('csvBtn').hidden = false;
+  r.savedTo ? rmsg(r.title + ' for ' + r.period + ' is ready and saved to the "' + r.savedTo + '" sheet.', 'success') : rmsg(r.title + ' is ready, but could not be saved to a sheet: ' + (r.saveError || 'unknown error'), 'error');
+}
+const cell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+$('csvBtn').onclick = () => {
+  if (!current) return; const r = current, L = [[r.title], ['Period', r.period], ['Generated', r.generatedAt], []];
+  r.summary.forEach(s => L.push(s)); L.push([]); r.tables.forEach(t => { L.push([t.title], t.headers); t.rows.forEach(x => L.push(x)); L.push([]); });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF' + L.map(l => l.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = r.title.replace(/\s+/g, '_') + '_' + r.period + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+$('dailyBtn').onclick = () => run('daily'); $('monthlyBtn').onclick = () => run('monthly');
+</script></body></html>
