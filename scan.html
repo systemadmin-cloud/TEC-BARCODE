@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Phone Scanner · Thangavelu Engineering College</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#bb005c"><link rel="icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="common.css">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>#reader{width:100%;min-height:200px;border-radius:12px;overflow:hidden;background:#1a0a13;margin-top:10px}#reader video{border-radius:12px}.camrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}</style></head><body>
+<header class="brand" style="padding-top:14px"><img class="logo" style="width:72px;height:72px" src="icon-512.png" alt="Thangavelu Engineering College logo"><h1 class="college-name" style="font-size:clamp(22px,6vw,32px)">Thangavelu Engineering College</h1></header>
+<nav class="nav"><a href="./">← Home</a><button type="button" class="btn secondary" id="settingsToggle">⚙️ Settings</button></nav>
+<section class="settings" id="settings"></section>
+<main class="app"><h2 class="app-title">Phone Scanner</h2><div class="subtitle" id="subtitle"></div>
+    <div class="mode-status" id="modeStatus"></div>
+    <div id="reader"></div><div class="camrow"><button type="button" class="btn" id="camBtn">📷 Start camera</button></div><div class="small" id="camHelp">Point the camera at the barcode on the student ID card. Hold steady, about 15–20 cm away.</div><label for="barcode">Or type barcode / register number</label><input id="barcode" type="text" inputmode="text" autocomplete="off" placeholder="Type and press Enter">
+    <div id="studentPanel" class="panel" hidden></div>
+    <div id="manualActions" class="manual-actions" hidden><button type="button" class="btn direction entry" id="manualInBtn">↘ ENTRY (IN)</button><button type="button" class="btn direction exit" id="manualOutBtn">↗ EXIT (OUT)</button></div>
+    <div class="row"><button type="button" class="btn clear" id="clearBtn">↺ Clear / Scan Next Student</button></div>
+    <div id="message" role="status" aria-live="polite" class="status info">Ready. Scan a student barcode.</div>
+    <div class="small" id="modeHelp"></div>
+</main>
+<div class="watermark" aria-hidden="true">THIVARA SOLUTIONS</div>
+<script src="common.js"></script>
+<script>
+const $ = TEC.$; let qr = null, running = false;
+TEC.mount({});
+$('barcode').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.value = ''; TEC.submit(v); } });
+async function startCam() {
+  if (running) return;
+  if (typeof Html5Qrcode === 'undefined') { $('camHelp').textContent = 'Camera library could not load (check internet). You can still type the barcode below.'; return; }
+  try {
+    const F = Html5QrcodeSupportedFormats;
+    qr = new Html5Qrcode('reader', { verbose: false, formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.UPC_A, F.ITF, F.CODABAR, F.QR_CODE], experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    await qr.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.floor(w * 0.92), height: Math.floor(Math.min(h * 0.6, w * 0.5)) }) }, text => TEC.submit(text), () => {});
+    running = true; $('camBtn').textContent = '⏹ Stop camera'; $('camHelp').textContent = 'Camera on. Point it at the student ID barcode.';
+  } catch (e) {
+    qr = null; $('camHelp').textContent = 'Could not start the camera: allow camera permission for this site (HTTPS required), then press Start camera. You can type the barcode meanwhile.';
+  }
+}
+async function stopCam() { if (qr && running) { try { await qr.stop(); qr.clear(); } catch (e) {} } running = false; qr = null; $('camBtn').textContent = '📷 Start camera'; }
+$('camBtn').onclick = () => running ? stopCam() : startCam();
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+window.addEventListener('load', () => { if (TEC.cfg.url && TEC.cfg.token) startCam(); });
+</script></body></html>
