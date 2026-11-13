@@ -3,7 +3,7 @@ const TEC = (() => {
   const KEY = 'tecGateConfig', DUP_MS = 4000;
   const parse = s => { try { return JSON.parse(s) || {}; } catch (e) { return {}; } };
   const admin = parse(localStorage.getItem('tecAdminConfig'));
-  let cfg = Object.assign({ url: admin.url || '', token: admin.token || '', mode: 'AUTO', gate: 'Main Gate', device: 'Security Desk', autoStart: 'OUT' }, parse(localStorage.getItem(KEY)));
+  let cfg = Object.assign({ url: admin.url || '', token: '', mode: 'AUTO', gate: 'Main Gate', device: 'Security Desk', autoStart: 'OUT' }, parse(localStorage.getItem(KEY)));
   if (cfg.autoStart !== 'IN') cfg.autoStart = 'OUT';
   /* Warden-permission switch lives on the server so every device and the admin page share it. */
   let srv = { wardenEnabled: true, wardenScope: 'OUT' }, wardenDirty = false;
